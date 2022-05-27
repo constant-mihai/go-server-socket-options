@@ -29,23 +29,27 @@ udp_client(const char *host, const char *serv)
 	hints.ai_socktype = SOCK_DGRAM;
 
 	if ( (n = getaddrinfo(host, serv, &hints, &res)) != 0)
-		err_quit("udp_client error for %s, %s: %s",
+		err_quit("udp_client, error getting addr info for %s, %s: %s",
 				 host, serv, gai_strerror(n));
 	rp = res;
 
 	do {
 		sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-		if (sockfd >= 0)
+		if (sockfd < 0) {
+            fprintf(stderr, "udp_client; error opening socket\n");
 			continue;
+        }
 
-        if (connect(sockfd, res->ai_addr, res->ai_addrlen) != -1)
+        if (connect(sockfd, res->ai_addr, res->ai_addrlen) != -1) {
+            fprintf(stdout, "udp_client; connected to socket\n");
             break;
+        }
 
         Close(sockfd);
 	} while ( (res = res->ai_next) != NULL);
 
-	if (res == NULL)	/* errno set from final socket() */
-		err_sys("udp_client error for %s, %s", host, serv);
+	if (res == NULL)
+		err_sys("udp_client error connecting to %s, %s", host, serv);
 
 	freeaddrinfo(rp);
 

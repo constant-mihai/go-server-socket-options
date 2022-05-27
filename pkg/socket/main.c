@@ -20,6 +20,8 @@ typedef struct {
     int retval;
 } client_t;
 
+const char *stop_test_g = "stop test";
+
 /*
  * Thread start routine.
  */
@@ -50,6 +52,10 @@ void *server_thread(void *arg)
         if (s == 0) printf("Received %zd bytes from %s:%s\n", nread, host, service);
         else fprintf(stderr, "getnameinfo: %s\n", gai_strerror(s));
 
+        if (!strncmp(buf, stop_test_g, strlen(stop_test_g))) {
+            return arg;
+        }
+
         if (sendto(sockfd, buf, nread, 0,
                    (struct sockaddr *) &peer_addr,
                    peer_addr_len) != nread) fprintf(stderr, "Error sending response\n");
@@ -67,9 +73,7 @@ void *client_thread(void *arg)
 
     client_t *client = (client_t*)arg;
     sockfd = udp_client(client->host, 
-                        client->serv,
-                        client->saptr,
-                        client->addrlenp);
+                        client->serv);
 
     for (int i=0; i<100; i++) {
         len = strlen(message) + 1;
@@ -91,6 +95,15 @@ void *client_thread(void *arg)
 
         printf("Received %zd bytes: %s\n", nread, buf);
     }
+    len = strlen(message) + 1;
+    /* +1 for terminating null byte */
+    nwrite = write(sockfd, stop_test_g, len);
+    if (nwrite != len) {
+        fprintf(stderr, "partial/failed write; wrote %li bytes", nwrite);
+        client->retval = -1;
+        return arg;
+    }
+
 
     return arg;
 }
@@ -111,7 +124,7 @@ int main(int argc, char **argv) {
 
     client_t c = {
         .host = "127.0.0.1",
-        .serv = "54321",
+        .serv = "12345",
     };
     status = pthread_create ( &thread_ids[0], NULL, server_thread, (void*)&s);
     if (status != 0) err_quit ("Server thread %d", strerror (status));
