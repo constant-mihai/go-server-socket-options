@@ -3,11 +3,14 @@ package socket
 import (
 	"context"
 	"testing"
+	"time"
 )
 
 func TestListenUdpSockopt(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	go listenUdpSockopt(ctx)
+	go listenUdpSockopt(ctx, "1")
+	time.Sleep(100 * time.Millisecond) //not sure if this is needed. does the UDP socket has a state machine?
+	go listenUdpSockopt(ctx, "2")
 
 	sendUdp()
 	cancel()

@@ -154,6 +154,14 @@ udp_socket(const char *host,
         if (sockfd < 0) {
             fprintf(stderr, "error opening socket %s\n", strerror(errno));
         } else {
+            int optval = 1;
+            // https://lwn.net/Articles/542629/
+            // https://stackoverflow.com/questions/14388706/how-do-so-reuseaddr-and-so-reuseport-differ
+            if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT,
+                           (void*)&optval, sizeof(optval)) ==-1){
+                fprintf(stderr, "error setting socket options:  %s\n", strerror(errno));
+                /* try to continue */
+            }
             break;
         }
     } while ( (res = res->ai_next) != NULL);
@@ -185,31 +193,25 @@ udp_server(const char *host, const char *serv, socklen_t *addrlenp)
     rp = res;
 
     do {
+        //sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
         sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
         if (sockfd < 0)
             continue;       /* error - try next one */
 
-        int optval = 0;
-
-        //TODO this doesn't work.:
-        //mihai@deu0207: [socket] $ go test -v -run=TestListenUdpSockopt
-        //=== RUN   TestListenUdpSockopt
-        //error setting socket options:  Protocol not available
-        //error setting socket options:  Protocol not available
-        //udp_server error for 127.0.0.1, 12345: Address already in use
-        //exit status 1
-        //FAIL  github.com/constant-mihai/go-server-socket-options/pkg/socket   0.002s
-        //
-        //I guess I can try splitting this function into two.
-        //one which creates the socket and sets the options and a second which binds.
-        if (setsockopt(sockfd, IPPROTO_UDP, SO_REUSEPORT,
-                       (void*)&optval, sizeof(optval)) ==-1){
+        int optval = 1; // omfg, is this actually an enable/disable flag?
+        // https://lwn.net/Articles/542629/
+        // https://stackoverflow.com/questions/14388706/how-do-so-reuseaddr-and-so-reuseport-differ
+        if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT,
+                       (void*)&optval, sizeof(optval)) == -1){
             fprintf(stderr, "error setting socket options:  %s\n", strerror(errno));
             /* try to continue */
         }
 
-        if (bind(sockfd, res->ai_addr, res->ai_addrlen) == 0)
-            break;          /* success */
+        if (bind(sockfd, res->ai_addr, res->ai_addrlen) == 0) {
+            break;
+        } else {
+            fprintf(stderr, "error binding to socket: %s\n", strerror(errno));
+        }
 
         Close(sockfd);      /* bind error - close and try next one */
     } while ( (res = res->ai_next) != NULL);
