@@ -1,6 +1,7 @@
 package socket
 
 import (
+	"bufio"
 	"context"
 	"io"
 	"log"
@@ -94,6 +95,7 @@ func listenSockopt(ctx context.Context) {
 }
 
 func send() {
+	p := make([]byte, BUFF_SIZE)
 	dst, err := net.ResolveTCPAddr("tcp", "127.0.0.1:12345")
 	if err != nil {
 		log.Fatalln("client: Error resolving tcp addr: ", err.Error())
@@ -125,6 +127,13 @@ func send() {
 		_, err = conn.Write([]byte("test string"))
 		if err != nil {
 			log.Fatalln("client: Write to server failed:", err.Error())
+		}
+
+		_, err = bufio.NewReader(conn).Read(p)
+		if err == nil {
+			log.Printf("%s\n", p)
+		} else {
+			log.Printf("Some error %v\n", err)
 		}
 
 		if time.Now().After(timeThen.Add(10 * time.Second)) {
