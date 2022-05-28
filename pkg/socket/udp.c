@@ -1,6 +1,33 @@
 #include "udp.h"
 
 static void
+err_log(int errnoflag, int level, const char *fmt, va_list ap)
+{
+	int		errno_save, n;
+	char	buf[MAXLINE + 1];
+
+	errno_save = errno;		/* value caller might want printed */
+#ifdef	HAVE_VSNPRINTF
+	vsnprintf(buf, MAXLINE, fmt, ap);	/* safe */
+#else
+	vsprintf(buf, fmt, ap);					/* not safe */
+#endif
+	n = strlen(buf);
+	if (errnoflag)
+		snprintf(buf + n, MAXLINE - n, ": %s", strerror(errno_save));
+	strcat(buf, "\n");
+
+	if (daemon_proc) {
+		syslog(level, fmt, ap);
+	} else {
+		fflush(stdout);		/* in case stdout and stderr are the same */
+		fputs(buf, stderr);
+		fflush(stderr);
+	}
+	return;
+}
+
+static void
 err_sys(const char *fmt, ...)
 {
 	va_list		ap;
@@ -12,10 +39,57 @@ err_sys(const char *fmt, ...)
 }
 
 static void
+err_quit(const char *fmt, ...)
+{
+	va_list		ap;
+
+	va_start(ap, fmt);
+	err_log(0, LOG_ERR, fmt, ap);
+	va_end(ap);
+	exit(1);
+}
+
+static void
 Close(int fd)
 {
 	if (close(fd) == -1)
 		err_sys("close error");
+}
+
+//TODO implement recvmmsg here
+int
+udp_mread(int sockfd, char *buf)
+{
+    struct sockaddr peer_addr;
+    socklen_t peer_addr_len;
+    ssize_t nread;
+    int s;
+
+    //sockfd = udp_server(server->host, server->serv, server->addrlenp);
+
+    peer_addr_len = sizeof(struct sockaddr);
+    nread = recvfrom(sockfd, buf, BUF_SIZE, 0,
+                     (struct sockaddr *) &peer_addr, &peer_addr_len);
+    if (nread == -1) {
+        fprintf(stderr, "error reading from socket");
+        return nread;
+    }
+
+    char host[NI_MAXHOST], service[NI_MAXSERV];
+
+    s = getnameinfo((struct sockaddr *) &peer_addr,
+                    peer_addr_len, host, NI_MAXHOST,
+                    service, NI_MAXSERV, NI_NUMERICSERV);
+
+    if (s == 0) printf("Received %zd bytes from %s:%s\n", nread, host, service);
+    else fprintf(stderr, "getnameinfo: %s\n", gai_strerror(s));
+
+
+    if (sendto(sockfd, buf, nread, 0,
+               (struct sockaddr *) &peer_addr,
+               peer_addr_len) != nread) fprintf(stderr, "Error sending response\n");
+
+    return nread;
 }
 
 int
@@ -73,6 +147,7 @@ udp_server(const char *host, const char *serv, socklen_t *addrlenp)
 	rp = res;
 
 	do {
+        //TODO use setsockopt here for UDP socket options
 		sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 		if (sockfd < 0)
 			continue;		/* error - try next one */

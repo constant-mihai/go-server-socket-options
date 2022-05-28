@@ -1,25 +1,6 @@
 #include "udp.h"
 #include <pthread.h>
 
-#define BUF_SIZE 500
-
-typedef struct {
-    const char *host;
-    const char *serv;
-    socklen_t *addrlenp;
-
-    int retval;
-} server_t;
-
-typedef struct {
-    const char *host;
-    const char *serv;
-    socklen_t *addrlenp;
-    SA **saptr;
-
-    int retval;
-} client_t;
-
 const char *stop_test_g = "stop test";
 
 /*
@@ -108,44 +89,44 @@ void *client_thread(void *arg)
     return arg;
 }
 
-int main(int argc, char **argv) {
-    daemon_proc = 0;
-    printf("main\n");
-    (void) argc;
-    (void) argv;
-    pthread_t thread_ids[2];
-    void *thread_result;
-    int status;
-
-    server_t s = {
-        .host = "0.0.0.0",
-        .serv = "12345",
-    };
-
-    client_t c = {
-        .host = "127.0.0.1",
-        .serv = "12345",
-    };
-    status = pthread_create ( &thread_ids[0], NULL, server_thread, (void*)&s);
-    if (status != 0) err_quit ("Server thread %d", strerror (status));
-
-    sleep(0.10);
-    status = pthread_create ( &thread_ids[1], NULL, client_thread, (void*)&c);
-    if (status != 0) err_quit ("Client thread %d", strerror (status));
-
-    status = pthread_join (thread_ids[1], &thread_result);
-    if (status != 0) err_quit ("Join thread %d", strerror(status));
-    client_t *client = (client_t*) thread_result;
-    printf("client retval: %i\n", client->retval);
-    fflush(stdout);		/* in case stdout and stderr are the same */
-
-    status = pthread_join (thread_ids[0], &thread_result);
-    if (status != 0) err_quit ("Join thread %d", strerror(status));
-    server_t *server = (server_t*) thread_result;
-    printf("server retval: %i", server->retval);
-
-    /* if (thread_result == NULL) return 0;*/
-    /* else return 1;*/
-
-    return 0;
-}
+//int main(int argc, char **argv) {
+//    daemon_proc = 0;
+//    printf("main\n");
+//    (void) argc;
+//    (void) argv;
+//    pthread_t thread_ids[2];
+//    void *thread_result;
+//    int status;
+//
+//    server_t s = {
+//        .host = "0.0.0.0",
+//        .serv = "12345",
+//    };
+//
+//    client_t c = {
+//        .host = "127.0.0.1",
+//        .serv = "12345",
+//    };
+//    status = pthread_create ( &thread_ids[0], NULL, server_thread, (void*)&s);
+//    if (status != 0) err_quit ("Server thread %d", strerror (status));
+//
+//    sleep(0.10);
+//    status = pthread_create ( &thread_ids[1], NULL, client_thread, (void*)&c);
+//    if (status != 0) err_quit ("Client thread %d", strerror (status));
+//
+//    status = pthread_join (thread_ids[1], &thread_result);
+//    if (status != 0) err_quit ("Join thread %d", strerror(status));
+//    client_t *client = (client_t*) thread_result;
+//    printf("client retval: %i\n", client->retval);
+//    fflush(stdout);		/* in case stdout and stderr are the same */
+//
+//    status = pthread_join (thread_ids[0], &thread_result);
+//    if (status != 0) err_quit ("Join thread %d", strerror(status));
+//    server_t *server = (server_t*) thread_result;
+//    printf("server retval: %i", server->retval);
+//
+//    /* if (thread_result == NULL) return 0;*/
+//    /* else return 1;*/
+//
+//    return 0;
+//}
