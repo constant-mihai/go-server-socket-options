@@ -47,6 +47,12 @@ int
 udp_mread(int sockfd, char *buf);
 
 int
+udp_socket(const char *host,
+           const char *serv,
+           struct sockaddr **saddr,
+           socklen_t *addrlenp);
+
+int
 udp_server(const char *host, const char *serv, socklen_t *addrlenp);
 
 #define	MAXLINE		4096	/* max text line length */
