@@ -12,7 +12,7 @@
 #include <stdarg.h>
 #include <errno.h>
 
-#define	SA	struct sockaddr
+#define SA  struct sockaddr
 #define BUF_SIZE 500
 
 // The address can be returned in a sockaddr in case we would like to connect from outside.
@@ -55,14 +55,14 @@ udp_socket(const char *host,
 int
 udp_server(const char *host, const char *serv, socklen_t *addrlenp);
 
-#define	MAXLINE		4096	/* max text line length */
+#define MAXLINE     4096    /* max text line length */
 
-int		daemon_proc;		/* set nonzero by daemon_init() */
+int     daemon_proc;        /* set nonzero by daemon_init() */
 
 // static void *
 // Malloc(size_t size)
 // {
-//     void	*ptr;
+//     void *ptr;
 
 //     if ( (ptr = malloc(size)) == NULL)
 //         err_sys("malloc error");
