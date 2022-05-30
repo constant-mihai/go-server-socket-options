@@ -44,7 +44,13 @@ int
 udp_client(const char *host, const char *serv);
 
 int
+udp_read(int sockfd, char *buf);
+
+int
 udp_mread(int sockfd, char *buf);
+
+int
+udp_msend(int sockfd);
 
 int
 udp_socket(const char *host,

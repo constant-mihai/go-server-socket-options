@@ -50,15 +50,13 @@ err_quit(const char *fmt, ...)
 }
 
 static void
-Close(int fd)
+Close(int sockfd)
 {
-    if (close(fd) == -1)
+    if (close(sockfd) == -1)
         err_sys("close error");
 }
 
-//TODO implement recvmmsg here
-int
-udp_mread(int sockfd, char *buf)
+udp_read(int sockfd, char *buf)
 {
     struct sockaddr peer_addr;
     socklen_t peer_addr_len;
@@ -90,6 +88,69 @@ udp_mread(int sockfd, char *buf)
                peer_addr_len) != nread) fprintf(stderr, "Error sending response\n");
 
     return nread;
+}
+
+int udp_msend(int sockfd)
+{
+    struct mmsghdr *messages = malloc(sizeof(struct mmsghdr) * BATCH_SIZE);
+    memset(messages, 0, sizeof(messages));
+
+    int i;
+    for (i=0; i<BATCH_SIZE; i++) {
+        struct iovec *iov = malloc(sizeof(struct iovec));
+        iov[0].iov_base=hello;
+        iov[0].iov_len=strlen(hello);
+        messages[i].msg_hdr.msg_iov=iov;
+        messages[i].msg_hdr.msg_iovlen=1;
+    }
+
+    struct timespec wait_time;
+    wait_time.tv_sec = 0;
+    wait_time.tv_nsec = 1000000/rate;
+
+    int sent;
+    while (1) {
+        if ((sent = sendmmsg(sockfd, messages, BATCH_SIZE, 0)) == -1) {
+            printf("%s\n", strerror(errno));
+            exit(errno);
+        }
+        sendcnt += sent;
+        nanosleep(&wait_time, NULL);
+    }
+    return NULL;
+}
+
+int
+udp_mread(int sockfd, char *buf)
+{
+    struct mmsghdr *messages = malloc(sizeof(struct mmsghdr) * BATCH_SIZE);
+    memset(messages, 0, sizeof(messages));
+
+    int i;
+    for (i=0; i<BATCH_SIZE; i++) {
+        struct iovec *iov = malloc(sizeof(struct iovec));
+        iov[0].iov_base=malloc(BUF_LEN * sizeof(char));;
+        iov[0].iov_len=BUF_LEN;
+        messages[i].msg_hdr.msg_iov=iov;
+        messages[i].msg_hdr.msg_iovlen=1;
+    }
+
+    struct timespec timeout;
+    timeout.tv_sec = 1;
+    timeout.tv_nsec = 0;
+
+    int cnt = 0;
+    int n;
+    while (1) {
+        n = recvmmsg(sockfd, messages, BATCH_SIZE, 0, &timeout);
+        for (i=0; i<n; i++) {
+            if (messages[i].msg_len == strlen(hello) && memcmp(hello, messages[i].msg_hdr.msg_iov[0].iov_base, n) == 0) {
+                if (++cnt == TEST_NUM) {
+                    return;
+                }
+            }
+        }
+    }
 }
 
 int
