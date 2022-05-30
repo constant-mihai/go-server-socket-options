@@ -59,6 +59,8 @@ func listen(ctx context.Context) {
 //     ...
 //     return c, nil
 // }
+// One can use however:
+// sock, err := lc.ListenPacket(ctx, "udp", *address)
 
 func listenSockopt(ctx context.Context) {
 	lc := net.ListenConfig{

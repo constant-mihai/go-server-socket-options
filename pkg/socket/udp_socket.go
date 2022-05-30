@@ -54,6 +54,21 @@ func listenUdpSockopt(ctx context.Context, id string) {
 	}
 }
 
+// This uses a C function to create the socket, I have later learned that go offers the options to
+// configure UDP sockets via ListenConfig:
+//var lc = net.ListenConfig{
+//        Control: func(network, address string, c syscall.RawConn) error {
+//                var opErr error
+//                if err := c.Control(func(fd uintptr) {
+//                        opErr = unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_REUSEPORT, 1)
+//                }); err != nil {
+//                        return err
+//                }
+//                return opErr
+//        },
+//}
+// ...
+//sock, err := lc.ListenPacket(ctx, "udp", *address)
 func udpSocket() (C.int, *C.struct_sockaddr, C.uint) {
 
 	host := C.CString("127.0.0.1")
