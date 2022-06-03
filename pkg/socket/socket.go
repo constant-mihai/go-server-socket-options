@@ -97,7 +97,7 @@ func listenSockopt(ctx context.Context) {
 }
 
 func send() {
-	p := make([]byte, BUFF_SIZE)
+	p := make([]byte, 1000)
 	dst, err := net.ResolveTCPAddr("tcp", "127.0.0.1:12345")
 	if err != nil {
 		log.Fatalln("client: Error resolving tcp addr: ", err.Error())

@@ -3,13 +3,6 @@
 #include "time.h"
 #include "udp.h"
 
-#define BUF_LEN 1024
-#define BATCH_SIZE 1000
-
-char* message = "test message";
-int sendcnt = 0;
-int rate = 1; 
-
 static void
 err_log(int errnoflag, int level, const char *fmt, va_list ap)
 {
@@ -101,37 +94,34 @@ udp_read(int sockfd, char *buf)
     return nread;
 }
 
-void udp_msend(int sockfd)
+int
+udp_msend(int sockfd, char **buf)
 {
+    //TODO these should be allocated somewhere externally and reused.
+    //the api should allow up to BATCH_SIZE of messages to be passed in.
     struct mmsghdr *messages = malloc(sizeof(struct mmsghdr) * BATCH_SIZE);
     memset(messages, 0, sizeof(struct mmsghdr)*BATCH_SIZE);
 
     int i;
     for (i=0; i<BATCH_SIZE; i++) {
         struct iovec *iov = malloc(sizeof(struct iovec));
-        iov[0].iov_base=message;
-        iov[0].iov_len=strlen(message);
-        messages[i].msg_hdr.msg_iov=iov;
-        messages[i].msg_hdr.msg_iovlen=1;
+        iov[0].iov_base = buf[i];
+        iov[0].iov_len = strlen(buf[i]);
+        messages[i].msg_hdr.msg_iov = iov;
+        messages[i].msg_hdr.msg_iovlen = 1;
     }
-
-    struct timespec wait_time;
-    wait_time.tv_sec = 0;
-    wait_time.tv_nsec = 1000000/rate;
 
     int sent;
-    while (1) {
-        if ((sent = sendmmsg(sockfd, messages, BATCH_SIZE, 0)) == -1) {
-            printf("%s\n", strerror(errno));
-            exit(errno);
-        }
-        sendcnt += sent;
-        nanosleep(&wait_time, NULL);
+    if ((sent = sendmmsg(sockfd, messages, BATCH_SIZE, 0)) == -1) {
+        printf("%s\n", strerror(errno));
+        exit(errno);
     }
+
+    return sent;
 }
 
 // TODO: this copies over memory, can I just use iovec from go?
-void
+int
 udp_mread(int sockfd, char **buf)
 {
     struct mmsghdr *messages = malloc(sizeof(struct mmsghdr) * BATCH_SIZE);
@@ -155,6 +145,7 @@ udp_mread(int sockfd, char **buf)
     for (i=0; i<n; i++) {
         memcpy(buf[i], messages[i].msg_hdr.msg_iov[0].iov_base, n);
     }
+    return n;
 }
 
 int

@@ -13,7 +13,10 @@
 #include <errno.h>
 
 #define SA  struct sockaddr
-#define BUF_SIZE 500
+
+const int BUF_SIZE;
+const int BUF_LEN;
+const int BATCH_SIZE;
 
 // The address can be returned in a sockaddr in case we would like to connect from outside.
 // int
@@ -46,11 +49,11 @@ udp_client(const char *host, const char *serv);
 int
 udp_read(int sockfd, char *buf);
 
-void
+int
 udp_mread(int sockfd, char **buf);
 
-void
-udp_msend(int sockfd);
+int
+udp_msend(int sockfd, char **bu);
 
 int
 udp_socket(const char *host,
