@@ -1,4 +1,14 @@
+#define _GNU_SOURCE
+
+#include "time.h"
 #include "udp.h"
+
+#define BUF_LEN 1024
+#define BATCH_SIZE 1000
+
+char* message = "test message";
+int sendcnt = 0;
+int rate = 1; 
 
 static void
 err_log(int errnoflag, int level, const char *fmt, va_list ap)
@@ -56,6 +66,7 @@ Close(int sockfd)
         err_sys("close error");
 }
 
+int
 udp_read(int sockfd, char *buf)
 {
     struct sockaddr peer_addr;
@@ -90,16 +101,16 @@ udp_read(int sockfd, char *buf)
     return nread;
 }
 
-int udp_msend(int sockfd)
+void udp_msend(int sockfd)
 {
     struct mmsghdr *messages = malloc(sizeof(struct mmsghdr) * BATCH_SIZE);
-    memset(messages, 0, sizeof(messages));
+    memset(messages, 0, sizeof(struct mmsghdr)*BATCH_SIZE);
 
     int i;
     for (i=0; i<BATCH_SIZE; i++) {
         struct iovec *iov = malloc(sizeof(struct iovec));
-        iov[0].iov_base=hello;
-        iov[0].iov_len=strlen(hello);
+        iov[0].iov_base=message;
+        iov[0].iov_len=strlen(message);
         messages[i].msg_hdr.msg_iov=iov;
         messages[i].msg_hdr.msg_iovlen=1;
     }
@@ -117,14 +128,14 @@ int udp_msend(int sockfd)
         sendcnt += sent;
         nanosleep(&wait_time, NULL);
     }
-    return NULL;
 }
 
-int
-udp_mread(int sockfd, char *buf)
+// TODO: this copies over memory, can I just use iovec from go?
+void
+udp_mread(int sockfd, char **buf)
 {
     struct mmsghdr *messages = malloc(sizeof(struct mmsghdr) * BATCH_SIZE);
-    memset(messages, 0, sizeof(messages));
+    memset(messages, 0, sizeof(struct mmsghdr) * BATCH_SIZE);
 
     int i;
     for (i=0; i<BATCH_SIZE; i++) {
@@ -139,17 +150,10 @@ udp_mread(int sockfd, char *buf)
     timeout.tv_sec = 1;
     timeout.tv_nsec = 0;
 
-    int cnt = 0;
     int n;
-    while (1) {
-        n = recvmmsg(sockfd, messages, BATCH_SIZE, 0, &timeout);
-        for (i=0; i<n; i++) {
-            if (messages[i].msg_len == strlen(hello) && memcmp(hello, messages[i].msg_hdr.msg_iov[0].iov_base, n) == 0) {
-                if (++cnt == TEST_NUM) {
-                    return;
-                }
-            }
-        }
+    n = recvmmsg(sockfd, messages, BATCH_SIZE, 0, &timeout);
+    for (i=0; i<n; i++) {
+        memcpy(buf[i], messages[i].msg_hdr.msg_iov[0].iov_base, n);
     }
 }
 
